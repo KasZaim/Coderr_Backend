@@ -14,7 +14,7 @@ class UserProfile(models.Model):
     description = models.TextField(max_length=300)
     tel = models.CharField(max_length=20)
     working_hours = models.CharField(max_length=25)
-    created_at = models.DateTimeField( auto_now_add=False)
+    created_at = models.DateTimeField(auto_now_add=True)
     type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='customer')
     
     def __str__(self):
