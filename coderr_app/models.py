@@ -10,7 +10,7 @@ class UserProfile(models.Model):
     user= models.OneToOneField(User, on_delete=models.CASCADE, related_name='user_profile')
     location = models.CharField(max_length=50)
     email = models.EmailField( max_length=254)
-    file = models.FileField( upload_to=None, max_length=100)
+    file = models.FileField( upload_to='profile_img/', max_length=100)
     description = models.TextField(max_length=300)
     tel = models.CharField(max_length=20)
     working_hours = models.CharField(max_length=25)
@@ -47,7 +47,7 @@ class OfferDetails(models.Model):
         ('standard', 'Standard'),
         ('premium', 'Premium')
     ]
-    offer = models.OneToOneField(Offers, on_delete=models.CASCADE, related_name='details')
+    offer = models.ForeignKey(Offers, on_delete=models.CASCADE, related_name='details')
     delivery_time_in_days = models.PositiveIntegerField(default=1 ,help_text='only positive integers allowed')
     revisions = models.IntegerField(default=-1, help_text="-1 means unlimited revisions")
     additional_information = models.TextField(blank=True, help_text="Additional information for the offer")

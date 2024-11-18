@@ -29,7 +29,9 @@ class RegistrationView(APIView):
             data = {
                 'token': token.key,
                 'username': saved_account.username,
-                'email': saved_account.email
+                'email': saved_account.email,
+                'user_id':saved_account.id
+                
             }
         else:
             data=serializer.errors
@@ -52,7 +54,8 @@ class CustomLoginView(APIView):
                 'username': user.username,
                 'email': user.email,
                 'first_name': user.first_name,
-                'last_name': user.last_name
+                'last_name': user.last_name,
+                'user_id': user.id
             }
             return Response(data, status=status.HTTP_200_OK)
         else:

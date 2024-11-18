@@ -16,9 +16,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from user_auth_app.api.views import RegistrationView,CustomLoginView
+from django.conf import settings
+from django.conf.urls.static import static
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # path('api/', include('coderr_app.api.urls')),
-    path('api/', include('user_auth_app.api.urls')),
+    path('api/', include('coderr_app.api.urls')),
+    path('api/registration/', RegistrationView.as_view(), name='registration-detail'),
+    path('api/login/', CustomLoginView.as_view(), name='login')
 ]
+
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -5,9 +5,11 @@ from django.contrib.auth.models import User
 class RegistrationSerializer(serializers.ModelSerializer):
     repeated_password = serializers.CharField(write_only=True)
     type = serializers.CharField(write_only=True)
+    user_id = serializers.ReadOnlyField(source='pk')
+    
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'first_name', 'last_name','repeated_password','type']  
+        fields = ['user_id','username', 'email', 'password','repeated_password','type']  
         extra_kwargs= {
             'password':{
                 'write_only': True
@@ -31,11 +33,9 @@ class RegistrationSerializer(serializers.ModelSerializer):
     def save(self):
         email = self.validated_data['email']
         pw = self.validated_data['password']
-        first_name=self.validated_data.get('first_name') 
-        last_name=self.validated_data.get('last_name', '')
         type = self.validated_data.pop('type')
                
-        account = User(email=email,username=self.validated_data['username'], first_name=first_name, last_name=last_name)
+        account = User(email=email,username=self.validated_data['username']) 
         account.set_password(pw)
         account.save()
 
