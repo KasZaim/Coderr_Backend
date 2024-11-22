@@ -4,6 +4,12 @@ from .serializer import UserProfileSerializer,UserProfileDetailSerializer,OfferS
 from ..models import UserProfile, Offers,OfferDetails
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from django.db.models import Min, Max
+from django_filters.rest_framework import DjangoFilterBackend
+from django_filters import rest_framework as filters
+from rest_framework.filters import OrderingFilter,SearchFilter
+
+from .pagination import OffersPagination
 
 class UserProfileDetailView(RetrieveUpdateAPIView):
     serializer_class = UserProfileSerializer
@@ -31,6 +37,7 @@ class UserProfileDetailView(RetrieveUpdateAPIView):
 class BusinessProfilesViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = UserProfileDetailSerializer
+    
     def get_queryset(self):
         return UserProfile.objects.filter(type='business')
     
@@ -40,10 +47,43 @@ class CustomerProfilesViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return UserProfile.objects.filter(type='customer')
     
+class OffersFilter(filters.FilterSet):
+    creator_id = filters.NumberFilter(field_name="user_id", lookup_expr='exact')  # Filtert nach Benutzer
+    min_price = filters.NumberFilter(field_name="min_price", lookup_expr='gte')  # Mindestpreis
+    max_delivery_time = filters.NumberFilter(field_name="max_delivery_time", lookup_expr='lte')  # Max. Lieferzeit
+
+    class Meta:
+        model = Offers
+        fields = ['creator_id', 'min_price', 'max_delivery_time']
+
 class OffersViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Offers.objects.all()
     serializer_class = OfferSerializer
+    filter_backends = [DjangoFilterBackend, OrderingFilter,SearchFilter]
+    filterset_class = OffersFilter 
+    ordering_fields = ['updated_at', 'min_price']
+    ordering = ['updated_at'] 
+    search_fields = ['title', 'description']
+    pagination_class = OffersPagination
+
+    def get_queryset(self):
+        """
+        Beschränkt das QuerySet auf die Angebote des authentifizierten Benutzers
+        und fügt aggregierte Felder hinzu.
+        """
+        user = self.request.user
+
+        queryset = Offers.objects.all().annotate(
+            min_price=Min('details__price'),
+            min_delivery_time=Min('details__delivery_time_in_days'),
+            max_delivery_time=Max('details__delivery_time_in_days')
+        )
+
+        # Admins sehen alle Angebote, normale Benutzer nur ihre eigenen
+        if not user.is_staff:
+            queryset = queryset.filter(user=user)
+
+        return queryset
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -53,6 +93,8 @@ class OffersViewSet(viewsets.ModelViewSet):
             {"message": "Offer and its details were deleted successfully."},
             status=status.HTTP_204_NO_CONTENT
         )
+    
+    
         
 class OfferDetailsView(viewsets.ModelViewSet):
     """
@@ -67,7 +109,10 @@ class OfferDetailsView(viewsets.ModelViewSet):
         Beschränkt das QuerySet auf die OfferDetails des authentifizierten Benutzers
         oder zeigt alle Einträge für Admins.
         """
+        
         user = self.request.user
         if user.is_staff:  # Admins sehen alles
             return OfferDetails.objects.all()
         return OfferDetails.objects.filter(offer__user=user)  # Nur eigene OfferDetails
+    
+        

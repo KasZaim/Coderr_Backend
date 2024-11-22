@@ -48,6 +48,8 @@ class OfferDetails(models.Model):
         ('premium', 'Premium')
     ]
     offer = models.ForeignKey(Offers, on_delete=models.CASCADE, related_name='details')
+    title = models.CharField(max_length=200, default="Offer Details")
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     delivery_time_in_days = models.PositiveIntegerField(default=1 ,help_text='only positive integers allowed')
     revisions = models.IntegerField(default=-1, help_text="-1 means unlimited revisions")
     additional_information = models.TextField(blank=True, help_text="Additional information for the offer")
