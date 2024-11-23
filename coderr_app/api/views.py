@@ -79,6 +79,7 @@ class OffersViewSet(viewsets.ModelViewSet):
             max_delivery_time=Max('details__delivery_time_in_days')
         )
 
+        
         # Admins sehen alle Angebote, normale Benutzer nur ihre eigenen
         if not user.is_staff:
             queryset = queryset.filter(user=user)
@@ -104,6 +105,14 @@ class OfferDetailsView(viewsets.ModelViewSet):
     queryset = OfferDetails.objects.all()
     serializer_class = OfferDetailsSerializer
     
+    def get_serializer_context(self):
+        """
+        Fügt die Anfrage zum Serializer-Kontext hinzu.
+        """
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
     def get_queryset(self):
         """
         Beschränkt das QuerySet auf die OfferDetails des authentifizierten Benutzers

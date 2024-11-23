@@ -27,8 +27,8 @@ class UserProfile(models.Model):
 
 class Offers(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='offers')
-    title = models.CharField( max_length=50)
-    image = models.FileField( upload_to=None, max_length=100, blank=True, null=True)
+    title = models.CharField(max_length=50)
+    image = models.FileField(upload_to=None, max_length=100, blank=True, null=True)
     description = models.TextField()
     created_at = models.DateTimeField( auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
