@@ -8,14 +8,6 @@ from rest_framework.authtoken.serializers import AuthTokenSerializer
 from django.contrib.auth.models import User
 from rest_framework import status
 
-# class UserProfileList(generics.ListCreateAPIView):
-#     queryset = User.objects.all()
-#     serializer_class = UserSerializer
-
-# class UserProfileDetail(generics.RetrieveUpdateDestroyAPIView):
-#     queryset = User.objects.all()
-#     serializer_class = UserSerializer
-
 class RegistrationView(APIView):
     permission_classes = [AllowAny]
     

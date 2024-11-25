@@ -65,7 +65,6 @@ class OfferDetails(models.Model):
 
 class Order(models.Model):
     status_choices = [
-        ('pending', 'Pending'),
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled')
@@ -74,7 +73,7 @@ class Order(models.Model):
     business_user=models.ForeignKey(User, on_delete=models.CASCADE, related_name='business_order')
     offer=models.ForeignKey(Offers, on_delete=models.CASCADE, related_name='order' )
     offer_detail=models.ForeignKey(OfferDetails, on_delete=models.CASCADE, related_name='order_details')
-    status = models.CharField(max_length=20, choices=status_choices, default='pending')
+    status = models.CharField(max_length=20, choices=status_choices, default='in_progress')
     title = models.CharField(max_length=50)
     revisions = models.IntegerField(default=-1, help_text="-1 means unlimited revisions")
     delivery_time_in_days = models.PositiveIntegerField()

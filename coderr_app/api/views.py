@@ -1,6 +1,6 @@
 from rest_framework import permissions,status,viewsets
 from rest_framework.generics import RetrieveUpdateAPIView
-from .serializer import UserProfileSerializer,UserProfileDetailSerializer,OfferSerializer,OfferDetailsSerializer, OrderSerializer
+from .serializer import UserProfileSerializer,UserProfileDetailSerializer,OfferSerializer,OfferDetailsSerializer, OrderSerializer,CustomerProfileSerializer
 from ..models import UserProfile, Offers,OfferDetails,Order
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -36,14 +36,14 @@ class UserProfileDetailView(RetrieveUpdateAPIView):
 
 class BusinessProfilesViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = UserProfileDetailSerializer
+    serializer_class = CustomerProfileSerializer
     
     def get_queryset(self):
         return UserProfile.objects.filter(type='business')
     
 class CustomerProfilesViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = UserProfileDetailSerializer
+    serializer_class = CustomerProfileSerializer
     def get_queryset(self):
         return UserProfile.objects.filter(type='customer')
     
@@ -114,15 +114,53 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     permission_classes = [permissions.IsAuthenticated]
 
+      
     def get_queryset(self):
         """
-        Beschränkt das QuerySet auf die OfferDetails des authentifizierten Benutzers
-        oder zeigt alle Einträge für Admins.
+        Zeigt Bestellungen nur für den authentifizierten Benutzer.
+        Admins sehen alle Bestellungen.
         """
+        user = self.request.user
         
-    def get_queryset(self):
-        return Order.objects.filter(customer_user=self.request.user)
+        if user.is_staff:
+            return Order.objects.all()
         
+        return Order.objects.filter(customer_user=user) | Order.objects.filter(business_user=user)
+    
+    def update(self, request, *args, **kwargs):
+        """
+        Erlaubt nur dem Owner (customer_user oder business_user), Änderungen vorzunehmen.
+        """
+        instance = self.get_object()
+        
+        if not request.user.is_staff and request.user != instance.business_user:
+            return Response(
+                {"detail": "You do not have permission to update this order."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        partial = kwargs.pop('partial', False)
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data)
+        
+    def destroy(self, request, *args, **kwargs):
+        """
+        Erlaubt nur Admins, eine Bestellung zu löschen.
+        """
+        if not request.user.is_staff:
+            return Response(
+                {"detail": "Only staff members can delete orders."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(
+            {"detail": "Order successfully deleted."},
+            status=status.HTTP_204_NO_CONTENT
+        )
     
     def get_serializer_context(self):
         context = super().get_serializer_context()

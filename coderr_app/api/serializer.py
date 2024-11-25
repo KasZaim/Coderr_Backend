@@ -39,32 +39,44 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class UserProfileDetailSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username', read_only=True)
-    first_name = serializers.CharField(source='user.first_name', read_only=True)
-    last_name = serializers.CharField(source='user.last_name', read_only=True)
-    email = serializers.EmailField(source='user.email', read_only=True)
-    pk = serializers.PrimaryKeyRelatedField(source='user', read_only=True)
-    user = serializers.PrimaryKeyRelatedField(read_only=True)
-
+    user = serializers.SerializerMethodField()
     class Meta:
         model = UserProfile
         fields = [
             'user',
-            # 'id',
-            'pk',           # Primärschlüssel des Profils
-            'username',     # Benutzername des verknüpften Users
-            'first_name',   # Vorname des Users
-            'last_name',    # Nachname des Users
-            'email',        # E-Mail-Adresse des Users
-            'location',     # Standort des Profils
-            'description',  # Beschreibung
-            'tel',          # Telefonnummer
-            'working_hours',  # Arbeitszeiten
-            'type',         # Typ des Profils (z. B. business, customer)
-            'created_at'    # Erstellungsdatum
+            'file',
+            'location',
+            'tel',
+            'description',
+            'working_hours',
+            'type'
         ]
         read_only_fields = ['id', 'type', 'created_at']
+        
+    def get_user(self, obj):
+        """
+        Generiert die verschachtelte Struktur für das 'user'-Feld.
+        """
+        user = obj.user
+        return {
+            "pk": user.pk,
+            "username": user.username,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+        }
+
+class CustomerProfileSerializer(UserProfileDetailSerializer):
     
+    class Meta:
+        model = UserProfile
+        fields = [
+            'user',         
+            'file',        
+            'created_at', 
+            'type'          
+        ]
+        read_only_fields = ['type']
+
 
 class OfferDetailsSerializer(serializers.ModelSerializer):
 
@@ -153,6 +165,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'id',
             'status',
             'business_user',
+            'customer_user',
             'title',
             'revisions',
             'delivery_time_in_days',
@@ -165,8 +178,8 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id',
-            'status',
             'business_user',
+            'customer_user',
             'title',
             'revisions',
             'delivery_time_in_days',
@@ -199,5 +212,4 @@ class OrderSerializer(serializers.ModelSerializer):
             features=offer_detail.features,
             offer_type=offer_detail.offer_type,
         )
-
         return order
