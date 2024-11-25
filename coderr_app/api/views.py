@@ -1,7 +1,7 @@
 from rest_framework import permissions,status,viewsets
 from rest_framework.generics import RetrieveUpdateAPIView
-from .serializer import UserProfileSerializer,UserProfileDetailSerializer,OfferSerializer,OfferDetailsSerializer
-from ..models import UserProfile, Offers,OfferDetails
+from .serializer import UserProfileSerializer,UserProfileDetailSerializer,OfferSerializer,OfferDetailsSerializer, OrderSerializer
+from ..models import UserProfile, Offers,OfferDetails,Order
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db.models import Min, Max
@@ -78,12 +78,6 @@ class OffersViewSet(viewsets.ModelViewSet):
             min_delivery_time=Min('details__delivery_time_in_days'),
             max_delivery_time=Max('details__delivery_time_in_days')
         )
-
-        
-        # Admins sehen alle Angebote, normale Benutzer nur ihre eigenen
-        if not user.is_staff:
-            queryset = queryset.filter(user=user)
-
         return queryset
     
     def destroy(self, request, *args, **kwargs):
@@ -113,15 +107,25 @@ class OfferDetailsView(viewsets.ModelViewSet):
         context['request'] = self.request
         return context
 
+    
+    
+class OrderViewSet(viewsets.ModelViewSet):
+    serializer_class = OrderSerializer
+    queryset = Order.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+
     def get_queryset(self):
         """
         Beschränkt das QuerySet auf die OfferDetails des authentifizierten Benutzers
         oder zeigt alle Einträge für Admins.
         """
         
-        user = self.request.user
-        if user.is_staff:  # Admins sehen alles
-            return OfferDetails.objects.all()
-        return OfferDetails.objects.filter(offer__user=user)  # Nur eigene OfferDetails
-    
+    def get_queryset(self):
+        return Order.objects.filter(customer_user=self.request.user)
         
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+    
