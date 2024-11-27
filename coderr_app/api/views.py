@@ -8,7 +8,7 @@ from django.db.models import Min, Max
 from django_filters.rest_framework import DjangoFilterBackend
 from django_filters import rest_framework as filters
 from rest_framework.filters import OrderingFilter,SearchFilter
-
+from .permissions import IsOwnerOrAdmin,IsCustomer,IsBusinessUser
 from .pagination import OffersPagination
 
 class UserProfileDetailView(RetrieveUpdateAPIView):
@@ -48,16 +48,16 @@ class CustomerProfilesViewSet(viewsets.ModelViewSet):
         return UserProfile.objects.filter(type='customer')
     
 class OffersFilter(filters.FilterSet):
-    creator_id = filters.NumberFilter(field_name="user_id", lookup_expr='exact')  # Filtert nach Benutzer
-    min_price = filters.NumberFilter(field_name="min_price", lookup_expr='gte')  # Mindestpreis
-    max_delivery_time = filters.NumberFilter(field_name="max_delivery_time", lookup_expr='lte')  # Max. Lieferzeit
+    creator_id = filters.NumberFilter(field_name="user_id", lookup_expr='exact')  
+    min_price = filters.NumberFilter(field_name="min_price", lookup_expr='gte') 
+    max_delivery_time = filters.NumberFilter(field_name="max_delivery_time", lookup_expr='lte') 
 
     class Meta:
         model = Offers
         fields = ['creator_id', 'min_price', 'max_delivery_time']
 
 class OffersViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated,IsBusinessUser,IsOwnerOrAdmin]
     serializer_class = OfferSerializer
     filter_backends = [DjangoFilterBackend, OrderingFilter,SearchFilter]
     filterset_class = OffersFilter 
@@ -112,7 +112,7 @@ class OfferDetailsView(viewsets.ModelViewSet):
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated,IsCustomer]
 
       
     def get_queryset(self):
