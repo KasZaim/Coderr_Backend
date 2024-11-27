@@ -1,15 +1,15 @@
 from rest_framework import permissions,status,viewsets
-from rest_framework.generics import RetrieveUpdateAPIView
-from .serializer import UserProfileSerializer,UserProfileDetailSerializer,OfferSerializer,OfferDetailsSerializer, OrderSerializer,CustomerProfileSerializer
-from ..models import UserProfile, Offers,OfferDetails,Order
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from django.db.models import Min, Max
-from django_filters.rest_framework import DjangoFilterBackend
-from django_filters import rest_framework as filters
 from rest_framework.filters import OrderingFilter,SearchFilter
-from .permissions import IsOwnerOrAdmin,IsCustomer,IsBusinessUser
+from django_filters import rest_framework as filters
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.generics import RetrieveUpdateAPIView
+from .serializer import UserProfileSerializer,ReviewSerializer,OfferSerializer,OfferDetailsSerializer, OrderSerializer,CustomerProfileSerializer
+from ..models import UserProfile, Offers,OfferDetails,Order,Review
+from django.db.models import Min, Max, Avg, Count
+from .permissions import IsOwnerOrAdmin,IsCustomer,IsBusinessUser,IsReviewerOrAdmin
 from .pagination import OffersPagination
+from rest_framework.views import APIView
 
 class UserProfileDetailView(RetrieveUpdateAPIView):
     serializer_class = UserProfileSerializer
@@ -166,4 +166,114 @@ class OrderViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+class OrderCountView(APIView):
+    """
+    Gibt die Anzahl der laufenden Bestellungen eines Geschäftsnutzers zurück.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, business_user_id):
+        try:
+            user_profile = UserProfile.objects.get(user__id=business_user_id)
+            if user_profile.type != 'business':
+                return Response({"detail": "User is not a business user."}, status=403)
+        except UserProfile.DoesNotExist:
+            return Response({"detail": "Business user not found."}, status=404)
+
+        count = Order.objects.filter(business_user_id=business_user_id, status='in_progress').count()
+        return Response({"order_count": count})
+
+class CompletedOrderCountView(APIView):
+    """
+    Gibt die Anzahl der abgeschlossenen Bestellungen eines Geschäftsnutzers zurück.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, business_user_id):
+        try:
+            user_profile = UserProfile.objects.get(user__id=business_user_id)
+            if user_profile.type != 'business':
+                return Response({"detail": "User is not a business user."}, status=403)
+        except UserProfile.DoesNotExist:
+            return Response({"detail": "Business user not found."}, status=404)
+
+        count = Order.objects.filter(business_user_id=business_user_id, status='completed').count()
+        return Response({"completed_order_count": count})
     
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    """
+    API-Endpunkt für Reviews (Listenansicht und Erstellung).
+    """
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly,IsReviewerOrAdmin]
+
+    filter_backends = [DjangoFilterBackend,OrderingFilter]
+    filterset_fields = ['business_user', 'reviewer']
+    ordering_fields = ['rating', 'updated_at']
+    
+    def get_queryset(self):
+        """
+        Filtert die Reviews basierend auf `business_user_id` und `reviewer_id`.
+        """
+        
+        queryset = super().get_queryset()
+        business_user_id = self.request.query_params.get('business_user_id')
+        reviewer_id = self.request.query_params.get('reviewer_id')
+        
+        if business_user_id:
+            queryset = queryset.filter(business_user_id= business_user_id)
+            
+        if reviewer_id:
+            queryset = queryset.filter(reviewer_id=reviewer_id)
+            
+        return queryset
+    
+    def create(self, request, *args, **kwargs):
+        """
+        Erstellt eine neue Bewertung. Nur Kunden können Bewertungen erstellen.
+        """
+        
+        if request.user.user_profile.type != 'customer':
+            return Response(
+                {"detail": "Only customers can submit reviews."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        business_user_id = request.data.get('business_user')
+        if Review.objects.filter(business_user_id=business_user_id, reviewer=request.user).exists():
+            return Response(
+                {"detail": "You have already submitted a review for this business user."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(reviewer=request.user)
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
+class BaseInfoView(APIView):
+    """
+    API-Endpunkt, der allgemeine Basisinformationen zur Plattform bereitstellt.
+    """
+
+    def get(self, request, format=None):
+        review_count = Review.objects.count()
+        
+        average_rating = Review.objects.aggregate(avg_rating=Avg('rating'))['avg_rating'] or 0.0
+        average_rating = round(average_rating, 1)
+        
+        business_profile_count = UserProfile.objects.filter(type='business').count()
+        offer_count = Offers.objects.count()
+
+        data = {
+            "review_count": review_count,
+            "average_rating": average_rating,
+            "business_profile_count": business_profile_count,
+            "offer_count": offer_count,
+        }
+
+        return Response(data, status=status.HTTP_200_OK)

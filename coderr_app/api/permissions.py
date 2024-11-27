@@ -49,3 +49,17 @@ class IsCustomer(BasePermission):
                 return request.user.user_profile.type == 'customer'
             return False
         return True
+    
+
+class IsReviewerOrAdmin(BasePermission):
+    """
+    Erlaubt Aktionen nur für den Ersteller der Bewertung (reviewer) oder Admins.
+    GET-Anfragen sind für alle erlaubt.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+
+        return bool(request.user and(request.user == obj.reviewer or request.user.is_staff)
+        )        
