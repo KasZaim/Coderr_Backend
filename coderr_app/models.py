@@ -2,6 +2,24 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class UserProfile(models.Model):
+    """
+    Modell für Benutzerprofile.
+
+    **Felder**:
+    - `user`: Verknüpfung mit dem Django-Benutzer.
+    - `location`: Standort des Benutzers.
+    - `email`: E-Mail-Adresse des Benutzers.
+    - `file`: Profilbild des Benutzers.
+    - `description`: Beschreibung des Benutzers.
+    - `tel`: Telefonnummer des Benutzers.
+    - `working_hours`: Arbeitszeiten des Benutzers.
+    - `created_at`: Datum und Uhrzeit der Erstellung des Profils.
+    - `type`: Benutzerrolle (z. B. Kunde, Geschäftsnutzer, Mitarbeiter).
+
+    **Zusätzliche Informationen**:
+    - Der Benutzer kann entweder Kunde, Geschäftsnutzer oder Mitarbeiter sein.
+    - Profile werden standardmäßig nach Benutzernamen sortiert.
+    """
     USER_TYPE_CHOICES = [
         ('customer', 'Customer'),
         ('business', 'Business'),
@@ -26,6 +44,20 @@ class UserProfile(models.Model):
 
 
 class Offers(models.Model):
+    """
+    Modell für Angebote.
+
+    **Felder**:
+    - `user`: Benutzer, der das Angebot erstellt hat.
+    - `title`: Titel des Angebots.
+    - `image`: Optionales Bild zum Angebot.
+    - `description`: Beschreibung des Angebots.
+    - `created_at`: Datum und Uhrzeit der Erstellung des Angebots.
+    - `updated_at`: Datum und Uhrzeit der letzten Aktualisierung des Angebots.
+
+    **Zusätzliche Informationen**:
+    - Angebote werden standardmäßig alphabetisch nach Titel sortiert.
+    """
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='offers')
     title = models.CharField(max_length=50)
     image = models.FileField(upload_to=None, max_length=100, blank=True, null=True)
@@ -91,9 +123,6 @@ class Order(models.Model):
         verbose_name_plural = 'Orders'
         
 class Review(models.Model):
-    """
-    Modell für Bewertungen von Geschäftsnutzern.
-    """
     business_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="business_reviews", limit_choices_to={'user_profile__type': 'business'})
     customer_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="customer_reviews",limit_choices_to={'user_profile__type': 'customer'})
     rating = models.PositiveSmallIntegerField()

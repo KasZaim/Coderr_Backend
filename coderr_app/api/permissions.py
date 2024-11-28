@@ -9,11 +9,6 @@ class IsOwnerOrAdmin(BasePermission):
     - DELETE, PUT, PATCH nur für den Owner (user) oder Admins.
     """
     def has_object_permission(self, request, view, obj):
-        """
-        Berechtigungen auf Objekt-Ebene:
-        - SAFE_METHODS sind für alle authentifizierten Benutzer erlaubt.
-        - DELETE, PUT, PATCH nur für den Owner (obj.user) oder Admins.
-        """
         # SAFE_METHODS sind immer erlaubt
         if request.method in SAFE_METHODS:
             return True

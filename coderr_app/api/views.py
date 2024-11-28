@@ -12,8 +12,19 @@ from .pagination import OffersPagination
 from rest_framework.views import APIView
 
 class UserProfileDetailView(RetrieveUpdateAPIView):
+    """
+    API-Endpunkt für Benutzerprofile.
+
+    **Methoden**:
+    - GET: Gibt die Profildetails des eines Benutzers zurück.
+    - PATCH: Aktualisiert das Profil des authentifizierten Benutzers sowie zugehörige Benutzerdaten (z. B. Name, E-Mail).
+
+    **Details**:
+    - Nur authentifizierte Benutzer können diese View verwenden.
+    - Benutzer können nur ihr eigenes Profil abrufen und bearbeiten.
+    """
     serializer_class = UserProfileSerializer
-    permission_classes = [permissions.IsAuthenticated] 
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly] 
     queryset = UserProfile.objects.all()
 
     def patch(self, request, *args, **kwargs):
@@ -33,14 +44,42 @@ class UserProfileDetailView(RetrieveUpdateAPIView):
 
 
 class BusinessProfilesViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
+    """
+    API-Endpunkt für Geschäftsnutzer-Profile.
+
+    **Methoden**:
+    - GET: Gibt eine Liste aller Geschäftsnutzer zurück.
+    - POST: Erstellt ein neues Geschäftsnutzer-Profil.
+    - PUT: Aktualisiert ein Geschäftsnutzer-Profil vollständig.
+    - PATCH: Aktualisiert ein Geschäftsnutzer-Profil teilweise.
+    - DELETE: Löscht ein Geschäftsnutzer-Profil.
+
+    **Details**:
+    - Nur authentifizierte Benutzer können diese View verwenden.
+    - Zeigt ausschließlich Profile mit `type='business'`.
+    """
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     serializer_class = CustomerProfileSerializer
     
     def get_queryset(self):
         return UserProfile.objects.filter(type='business')
     
 class CustomerProfilesViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
+    """
+    API-Endpunkt für Kundennutzer-Profile.
+
+    **Methoden**:
+    - GET: Gibt eine Liste aller Kundennutzer zurück.
+    - POST: Erstellt ein neues Kundennutzer-Profil.
+    - PUT: Aktualisiert ein Kundennutzer-Profil vollständig.
+    - PATCH: Aktualisiert ein Kundennutzer-Profil teilweise.
+    - DELETE: Löscht ein Kundennutzer-Profil.
+
+    **Details**:
+    - Nur authentifizierte Benutzer können diese View verwenden.
+    - Zeigt ausschließlich Profile mit `type='customer'`.
+    """
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     serializer_class = CustomerProfileSerializer
     def get_queryset(self):
         return UserProfile.objects.filter(type='customer')
@@ -55,6 +94,20 @@ class OffersFilter(filters.FilterSet):
         fields = ['creator_id', 'min_price', 'max_delivery_time']
 
 class OffersViewSet(viewsets.ModelViewSet):
+    """
+    API-Endpunkt für Angebote (Offers).
+
+    **Methoden**:
+    - GET: Listet alle Angebote auf, gefiltert nach Authentifizierung und Berechtigungen.
+    - POST: Erstellt ein neues Angebot.
+    - PUT: Aktualisiert ein Angebot vollständig.
+    - PATCH: Aktualisiert ein Angebot teilweise.
+    - DELETE: Löscht ein Angebot und die zugehörigen Details.
+
+    **Details**:
+    - Nur authentifizierte Benutzer mit Berechtigungen (z. B. `IsBusinessUser`, `IsOwnerOrAdmin`) können diese View verwenden.
+    - Unterstützt Filter, Suche und Sortierung.
+    """
     permission_classes = [permissions.IsAuthenticated,IsBusinessUser,IsOwnerOrAdmin]
     serializer_class = OfferSerializer
     filter_backends = [DjangoFilterBackend, OrderingFilter,SearchFilter]
@@ -108,16 +161,25 @@ class OfferDetailsView(viewsets.ModelViewSet):
     
     
 class OrderViewSet(viewsets.ModelViewSet):
+    """
+    API-Endpunkt für Bestellungen (Orders).
+
+    **Methoden**:
+    - GET: Zeigt Bestellungen für den authentifizierten Benutzer (Admins sehen alle).
+    - POST: Erstellt eine neue Bestellung.
+    - PUT: Aktualisiert eine Bestellung vollständig (nur Owner oder Admins).
+    - PATCH: Aktualisiert eine Bestellung teilweise (nur Owner oder Admins).
+    - DELETE: Löscht eine Bestellung (nur Admins).
+
+    **Details**:
+    - Nur authentifizierte Benutzer mit entsprechenden Berechtigungen können diese View verwenden.
+    """
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
     permission_classes = [permissions.IsAuthenticated,IsCustomer]
 
       
     def get_queryset(self):
-        """
-        Zeigt Bestellungen nur für den authentifizierten Benutzer.
-        Admins sehen alle Bestellungen.
-        """
         user = self.request.user
         
         if user.is_staff:
@@ -126,9 +188,6 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Order.objects.filter(customer_user=user) | Order.objects.filter(business_user=user)
     
     def update(self, request, *args, **kwargs):
-        """
-        Erlaubt nur dem Owner (customer_user oder business_user), Änderungen vorzunehmen.
-        """
         instance = self.get_object()
         
         if not request.user.is_staff and request.user != instance.business_user:
@@ -144,9 +203,6 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
         
     def destroy(self, request, *args, **kwargs):
-        """
-        Erlaubt nur Admins, eine Bestellung zu löschen.
-        """
         if not request.user.is_staff:
             return Response(
                 {"detail": "Only staff members can delete orders."},
@@ -167,10 +223,21 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 class OrderCountView(APIView):
     """
-    Gibt die Anzahl der laufenden Bestellungen eines Geschäftsnutzers zurück.
-    """
-    permission_classes = [permissions.IsAuthenticated]
+    Gibt die Anzahl der Bestellungen mit dem Status `in_progress` für einen Geschäftsnutzer zurück.
 
+    **Methoden**:
+    - GET: Liefert die Anzahl der laufenden Bestellungen (`order_count`).
+
+    **Parameter**:
+    - `business_user_id`: ID des Geschäftsnutzers.
+
+    **Antwort**:
+    - 200 OK: Gibt die Anzahl der laufenden Bestellungen zurück.
+    - 403 Forbidden: Wenn der Benutzer kein Geschäftsnutzer ist.
+    - 404 Not Found: Wenn der Geschäftsnutzer nicht existiert.
+    """
+    
+    permission_classes = [permissions.IsAuthenticated]
     def get(self, request, business_user_id):
         try:
             user_profile = UserProfile.objects.get(user__id=business_user_id)
@@ -184,7 +251,18 @@ class OrderCountView(APIView):
 
 class CompletedOrderCountView(APIView):
     """
-    Gibt die Anzahl der abgeschlossenen Bestellungen eines Geschäftsnutzers zurück.
+    Gibt die Anzahl der abgeschlossenen Bestellungen (`completed`) für einen Geschäftsnutzer zurück.
+
+    **Methoden**:
+    - GET: Liefert die Anzahl der abgeschlossenen Bestellungen (`completed_order_count`).
+
+    **Parameter**:
+    - `business_user_id`: ID des Geschäftsnutzers.
+
+    **Antwort**:
+    - 200 OK: Gibt die Anzahl der abgeschlossenen Bestellungen zurück.
+    - 403 Forbidden: Wenn der Benutzer kein Geschäftsnutzer ist.
+    - 404 Not Found: Wenn der Geschäftsnutzer nicht existiert.
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -229,26 +307,23 @@ class ReviewViewSet(viewsets.ModelViewSet):
     ordering_fields = ['rating', 'updated_at']
     
     def perform_create(self, serializer):
-        """
-        Erstellt eine neue Bewertung und verknüpft sie mit dem authentifizierten Benutzer.
-
-        Der Benutzer wird als `customer_user` gespeichert.
-        """
         serializer.save(customer_user=self.request.user)
 
     def destroy(self, request, *args, **kwargs):
-        """
-        Löscht die angegebene Bewertung und gibt eine leere Antwort mit dem Status 200 zurück.
-        """
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
     
 class BaseInfoView(APIView):
     """
-    API-Endpunkt, der allgemeine Basisinformationen zur Plattform bereitstellt.
-    """
+    API-Endpunkt für allgemeine Basisinformationen.
 
+    **Methoden**:
+    - GET: Gibt Statistiken zur Plattform zurück (Anzahl der Bewertungen, Angebote, etc.).
+
+    **Details**:
+    - Keine Authentifizierung erforderlich.
+    """
     def get(self, request, format=None):
         review_count = Review.objects.count()
         
