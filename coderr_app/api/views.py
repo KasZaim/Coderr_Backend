@@ -14,9 +14,7 @@ from rest_framework.views import APIView
 class UserProfileDetailView(RetrieveUpdateAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated] 
-    
-    def get_object(self):
-        return UserProfile.objects.get(user=self.request.user)
+    queryset = UserProfile.objects.all()
 
     def patch(self, request, *args, **kwargs):
         profile = self.get_object()
@@ -201,59 +199,50 @@ class CompletedOrderCountView(APIView):
         count = Order.objects.filter(business_user_id=business_user_id, status='completed').count()
         return Response({"completed_order_count": count})
     
+class ReviewsFilter(filters.FilterSet):
+    """
+    FilterSet zum Filtern von Bewertungen.
 
+    **Felder**:
+    - **business_user_id**: ID des Geschäftsbenutzers, dessen Bewertungen abgerufen werden sollen.
+    - **reviewer_id**: ID des Kunden, der die Bewertung abgegeben hat.
+
+    **Verwendete Modelle**: Reviews
+    """
+    business_user_id = filters.NumberFilter(field_name='business_user__id')
+    reviewer_id = filters.NumberFilter(field_name='customer_user__id')
+
+    class Meta:
+        model = Review
+        fields = ['business_user_id', 'reviewer_id']
+        
 class ReviewViewSet(viewsets.ModelViewSet):
     """
     API-Endpunkt für Reviews (Listenansicht und Erstellung).
     """
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly,IsReviewerOrAdmin]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly] #IsReviewerOrAdmin
 
     filter_backends = [DjangoFilterBackend,OrderingFilter]
-    filterset_fields = ['business_user', 'reviewer']
+    filterset_class = ReviewsFilter
     ordering_fields = ['rating', 'updated_at']
     
-    def get_queryset(self):
+    def perform_create(self, serializer):
         """
-        Filtert die Reviews basierend auf `business_user_id` und `reviewer_id`.
+        Erstellt eine neue Bewertung und verknüpft sie mit dem authentifizierten Benutzer.
+
+        Der Benutzer wird als `customer_user` gespeichert.
         """
-        
-        queryset = super().get_queryset()
-        business_user_id = self.request.query_params.get('business_user_id')
-        reviewer_id = self.request.query_params.get('reviewer_id')
-        
-        if business_user_id:
-            queryset = queryset.filter(business_user_id= business_user_id)
-            
-        if reviewer_id:
-            queryset = queryset.filter(reviewer_id=reviewer_id)
-            
-        return queryset
-    
-    def create(self, request, *args, **kwargs):
+        serializer.save(customer_user=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
         """
-        Erstellt eine neue Bewertung. Nur Kunden können Bewertungen erstellen.
+        Löscht die angegebene Bewertung und gibt eine leere Antwort mit dem Status 200 zurück.
         """
-        
-        if request.user.user_profile.type != 'customer':
-            return Response(
-                {"detail": "Only customers can submit reviews."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-            
-        business_user_id = request.data.get('business_user')
-        if Review.objects.filter(business_user_id=business_user_id, reviewer=request.user).exists():
-            return Response(
-                {"detail": "You have already submitted a review for this business user."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(reviewer=request.user)
-        
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
 class BaseInfoView(APIView):
     """

@@ -94,17 +94,15 @@ class Review(models.Model):
     """
     Modell für Bewertungen von Geschäftsnutzern.
     """
-
-    business_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="received_reviews",)
-    reviewer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="submitted_reviews",)
+    business_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="business_reviews", limit_choices_to={'user_profile__type': 'business'})
+    customer_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="customer_reviews",limit_choices_to={'user_profile__type': 'customer'})
     rating = models.PositiveSmallIntegerField()
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('business_user', 'reviewer')
         ordering = ['-updated_at']  
 
     def __str__(self):
-        return f"Review by {self.reviewer.username} for {self.business_user.username} (Rating: {self.rating})"
+        return f"Review by {self.customer_user} for {self.business_user} (Rating: {self.rating})"

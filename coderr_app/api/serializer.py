@@ -11,20 +11,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     Fügt zusätzliche Felder aus dem User-Modell hinzu, wie `username`, `first_name` und `last_name`. Beinhaltet auch Profilinformationen wie Standort, E-Mail und Beschreibung.
 
-    Attributes:
-    user (PrimaryKeyRelatedField): Benutzer, dem das Profil gehört (read-only).
-    username (CharField): Benutzername des zugehörigen Benutzers (read-only).
-    first_name (CharField): Vorname des Benutzers (read-only).
-    last_name (CharField): Nachname des Benutzers (read-only).
-    location (CharField): Standort des Benutzers.
-    email (EmailField): E-Mail-Adresse des Benutzers.
-    file (FileField): Profilbild oder Datei des Benutzers.
-    description (TextField): Beschreibung oder Biografie des Benutzers.
-    tel (CharField): Telefonnummer des Benutzers.
-    working_hours (CharField): Arbeitszeiten des Benutzers.
-    type (CharField): Typ des Benutzers (z. B. 'customer', 'business').
-    created_at (DateTimeField): Zeitpunkt der Profilerstellung (read-only).
-
     Meta:
     model: UserProfile
     fields: Alle oben genannten Felder.
@@ -70,15 +56,6 @@ class UserProfileDetailSerializer(serializers.ModelSerializer):
 
     Erweitert das UserProfile um verschachtelte Benutzerinformationen und zusätzliche Profildetails.
 
-    Attributes:
-    user (SerializerMethodField): Verschachtelte Benutzerinformationen, einschließlich `pk`, `username`, `first_name` und `last_name`.
-    file (FileField): Profilbild oder Datei des Benutzers.
-    location (CharField): Standort des Benutzers.
-    tel (CharField): Telefonnummer des Benutzers.
-    description (TextField): Beschreibung oder Biografie des Benutzers.
-    working_hours (CharField): Arbeitszeiten des Benutzers.
-    type (CharField): Typ des Benutzers (z. B. 'customer', 'business') (read-only).
-
     Meta:
     model: UserProfile
     fields: ['user', 'file', 'location', 'tel', 'description', 'working_hours', 'type']
@@ -119,13 +96,7 @@ class CustomerProfileSerializer(UserProfileDetailSerializer):
     Serializer für Kundenprofile.
 
     Basierend auf dem UserProfileDetailSerializer, aber spezialisiert für Kunden, mit einer reduzierten Anzahl von Feldern.
-
-    Attributes:
-    user (SerializerMethodField): Verschachtelte Benutzerinformationen.
-    file (FileField): Profilbild oder Datei des Kunden.
-    created_at (DateTimeField): Zeitpunkt der Profilerstellung.
-    type (CharField): Typ des Benutzers, standardmäßig 'customer' (read-only).
-
+    
     Meta:
     model: UserProfile
     fields: ['user', 'file', 'created_at', 'type']
@@ -148,18 +119,7 @@ class OfferDetailsSerializer(serializers.ModelSerializer):
     Serializer für das OfferDetails-Modell.
 
     Verarbeitet die Details eines Angebots, einschließlich Preis, Lieferzeit und spezifische Merkmale.
-
-    Attributes:
-    id (IntegerField): Primärschlüssel des Angebotsdetails (read-only).
-    title (CharField): Titel des Angebotsdetails.
-    price (DecimalField): Preis des Angebotsdetails.
-    offer (PrimaryKeyRelatedField): Zugehöriges Angebot (read-only).
-    delivery_time_in_days (IntegerField): Lieferzeit in Tagen.
-    revisions (IntegerField): Anzahl der erlaubten Überarbeitungen.
-    additional_information (TextField): Zusätzliche Informationen zum Angebot.
-    features (JSONField): Merkmale oder Funktionen des Angebots.
-    offer_type (CharField): Typ des Angebotsdetails (z. B. 'basic', 'standard', 'premium').
-
+    
     Meta:
     model: OfferDetails
     fields: Alle oben genannten Felder.
@@ -189,29 +149,11 @@ class OfferSerializer(serializers.ModelSerializer):
 
     Verarbeitet Angebote und deren Details, einschließlich Benutzerinformationen und Preis-/Lieferzeitberechnungen.
 
-    Attributes:
-    id (IntegerField): Primärschlüssel des Angebots (read-only).
-    title (CharField): Titel des Angebots.
-    min_delivery_time (IntegerField): Minimale Lieferzeit über alle Angebotsdetails hinweg (read-only).
-    max_delivery_time (IntegerField): Maximale Lieferzeit über alle Angebotsdetails hinweg (read-only).
-    min_price (DecimalField): Niedrigster Preis über alle Angebotsdetails hinweg (read-only).
-    user (PrimaryKeyRelatedField): Benutzer, der das Angebot erstellt hat (read-only).
-    user_details (SerializerMethodField): Zusätzliche Informationen über den Benutzer, wie `first_name`, `last_name` und `username`.
-    image (FileField): Bild des Angebots.
-    description (TextField): Beschreibung des Angebots.
-    details (OfferDetailsSerializer): Liste der zugehörigen Angebotsdetails.
-    created_at (DateTimeField): Zeitpunkt der Angebotserstellung (read-only).
-    updated_at (DateTimeField): Zeitpunkt der letzten Aktualisierung (read-only).
-
     Meta:
     model: Offers
     fields: Alle oben genannten Felder.
     read_only_fields: ['id', 'created_at', 'updated_at']
 
-    Methoden:
-    get_user_details(self, obj): Gibt die Benutzerinformationen für das 'user_details'-Feld zurück.
-    create(self, validated_data): Erstellt ein neues Angebot zusammen mit seinen Details.
-    update(self, instance, validated_data): Aktualisiert ein bestehendes Angebot und seine Details.
     """
 
     details = OfferDetailsSerializer(many=True)
@@ -277,21 +219,6 @@ class OrderSerializer(serializers.ModelSerializer):
     Serializer für das Order-Modell.
 
     Verarbeitet Bestellungen, die auf Angebotsdetails basieren, und stellt sicher, dass relevante Felder korrekt gesetzt werden.
-
-    Attributes:
-    id (IntegerField): Primärschlüssel der Bestellung (read-only).
-    status (CharField): Status der Bestellung.
-    business_user (PrimaryKeyRelatedField): Geschäftsnutzer, der die Bestellung bearbeitet (read-only).
-    customer_user (PrimaryKeyRelatedField): Kunde, der die Bestellung aufgegeben hat (read-only).
-    title (CharField): Titel der Bestellung, basierend auf dem Angebotsdetail (read-only).
-    revisions (IntegerField): Anzahl der erlaubten Überarbeitungen (read-only).
-    delivery_time_in_days (IntegerField): Lieferzeit in Tagen (read-only).
-    price (DecimalField): Preis der Bestellung (read-only).
-    features (JSONField): Merkmale oder Funktionen der Bestellung (read-only).
-    offer_type (CharField): Typ des Angebots (read-only).
-    created_at (DateTimeField): Zeitpunkt der Bestellung (read-only).
-    updated_at (DateTimeField): Zeitpunkt der letzten Aktualisierung (read-only).
-    offer_detail_id (IntegerField): ID des Angebotsdetails, auf dem die Bestellung basiert (write-only).
 
     Meta:
     model: Order
@@ -372,33 +299,27 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     """
-    Serializer für das Review-Modell.
-
-    Verarbeitet Bewertungen, die von Kunden für Geschäftsnutzer erstellt werden, und stellt sicher, dass nur autorisierte Benutzer Bewertungen erstellen können.
-
+    Serializer für das Reviews-Modell, das Bewertungen von Benutzern für Business-Anbieter darstellt.
+    
     Attributes:
-    id (IntegerField): Primärschlüssel der Bewertung (read-only).
-    business_user (PrimaryKeyRelatedField): Geschäftsnutzer, der bewertet wird (read-only nach Erstellung).
-    reviewer (PrimaryKeyRelatedField): Kunde, der die Bewertung abgibt (read-only).
-    rating (IntegerField): Bewertung, typischerweise auf einer Skala von 1 bis 5.
-    description (TextField): Textuelle Beschreibung oder Kommentare zur Bewertung.
-    created_at (DateTimeField): Zeitpunkt der Erstellung der Bewertung (read-only).
-    updated_at (DateTimeField): Zeitpunkt der letzten Aktualisierung (read-only).
-
+        reviewer (PrimaryKeyRelatedField): Der Benutzer, der die Bewertung abgegeben hat.
+    
     Meta:
-    model: Review
-    fields: ['id', 'business_user', 'reviewer', 'rating', 'description', 'created_at', 'updated_at']
-    read_only_fields: ['reviewer', 'business_user', 'created_at', 'updated_at']
-
-    Hinweis:
-    - `business_user` ist beim Erstellen erforderlich, aber nach der Erstellung schreibgeschützt.
-    - `reviewer` wird automatisch auf den aktuell authentifizierten Benutzer gesetzt.
+        model: Reviews
+        fields: Alle relevanten Felder der Bewertung.
     """
-
-    business_user = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(user_profile__type='business'))
-    reviewer = serializers.PrimaryKeyRelatedField(read_only=True)
-
+    reviewer = serializers.PrimaryKeyRelatedField(source='customer_user', read_only=True)
     class Meta:
         model = Review
         fields = ['id', 'business_user', 'reviewer', 'rating', 'description', 'created_at', 'updated_at']
-        read_only_fields = ['reviewer','business_user','created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'customer_user']
+
+    def create(self, validated_data):
+        """
+        Erstellt eine neue Bewertung für einen Business-Benutzer.
+        """
+        customer_user = validated_data.pop('customer_user')
+        review = Review.objects.create(customer_user=customer_user, **validated_data)
+        return review
+    
+    

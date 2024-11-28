@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserProfile,Offers,OfferDetails, Order
+from .models import UserProfile, Offers, OfferDetails, Order, Review
 
 
 class UserProfileAdmin(admin.ModelAdmin):
@@ -13,3 +13,4 @@ admin.site.register(UserProfile, UserProfileAdmin)
 admin.site.register(Offers)
 admin.site.register(OfferDetails)
 admin.site.register(Order,OrderAdmin)
+admin.site.register(Review)
