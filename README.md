@@ -1,6 +1,6 @@
- Coderr backend
+# Coderr Backend
 
-The Coderr Backend is the server-side component of the Coderr platform, a Fiverr clone built with Django and Django Rest Framework (DRF). It provides robust APIs for managing users, profiles, offers, orders, reviews, and other functionalities required for a freelance marketplace.
+### The Coderr Backend is the server-side component of the Coderr platform, a Fiverr clone built with Django and Django Rest Framework (DRF). It provides robust APIs for managing users, profiles, offers, orders, reviews, and other functionalities required for a freelance marketplace.
 
 ## Features
 
