@@ -56,5 +56,4 @@ class IsReviewerOrAdmin(BasePermission):
         if request.method in SAFE_METHODS:
             return True
 
-        return bool(request.user and(request.user == obj.reviewer or request.user.is_staff)
-        )        
+        return request.user and (request.user == obj.customer_user or request.user.is_staff)        

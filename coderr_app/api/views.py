@@ -4,12 +4,13 @@ from rest_framework.filters import OrderingFilter,SearchFilter
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import RetrieveUpdateAPIView
-from .serializer import UserProfileSerializer,ReviewSerializer,OfferSerializer,OfferDetailsSerializer, OrderSerializer,CustomerProfileSerializer
+from .serializer import UserProfileSerializer,ReviewSerializer,OfferSerializer,OfferDetailsSerializer, OrderSerializer,CustomerProfileSerializer,BusinesProfileSerializer
 from ..models import UserProfile, Offers,OfferDetails,Order,Review
-from django.db.models import Min, Max, Avg, Count
+from django.db.models import Min, Max, Avg
 from .permissions import IsOwnerOrAdmin,IsCustomer,IsBusinessUser,IsReviewerOrAdmin
 from .pagination import OffersPagination
 from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied
 
 class UserProfileDetailView(RetrieveUpdateAPIView):
     """
@@ -24,12 +25,15 @@ class UserProfileDetailView(RetrieveUpdateAPIView):
     - Benutzer können nur ihr eigenes Profil abrufen und bearbeiten.
     """
     serializer_class = UserProfileSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly] 
+    permission_classes = [permissions.IsAuthenticated] 
     queryset = UserProfile.objects.all()
-
+    
     def patch(self, request, *args, **kwargs):
         profile = self.get_object()
         user = profile.user
+        
+        if request.user != user and not request.user.is_staff:
+            raise PermissionDenied("You do not have permission to edit this profile.")
         
         for field in ['first_name', 'last_name', 'email']:
             if field in request.data:
@@ -59,7 +63,7 @@ class BusinessProfilesViewSet(viewsets.ModelViewSet):
     - Zeigt ausschließlich Profile mit `type='business'`.
     """
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    serializer_class = CustomerProfileSerializer
+    serializer_class = BusinesProfileSerializer
     
     def get_queryset(self):
         return UserProfile.objects.filter(type='business')
@@ -300,7 +304,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     """
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly] #IsReviewerOrAdmin
+    permission_classes = [IsReviewerOrAdmin] 
 
     filter_backends = [DjangoFilterBackend,OrderingFilter]
     filterset_class = ReviewsFilter

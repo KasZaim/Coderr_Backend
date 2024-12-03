@@ -1,8 +1,7 @@
-from django.urls import reverse
 from rest_framework import serializers
 from ..models import UserProfile, Offers, OfferDetails,Order,Review
 from django.conf import settings
-from django.contrib.auth.models import User
+import re
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -99,20 +98,55 @@ class CustomerProfileSerializer(UserProfileDetailSerializer):
     
     Meta:
     model: UserProfile
-    fields: ['user', 'file', 'created_at', 'type']
+    fields: ['user','pk', 'file', 'uploaded_at', 'type']
     read_only_fields: ['type']
     """
-
+    uploaded_at = serializers.DateTimeField(source='created_at', read_only=True)
     class Meta:
         model = UserProfile
         fields = [
-            'user',         
-            'file',        
-            'created_at', 
+            'user',
+            'pk',     
+            'file',     
+            'uploaded_at', 
             'type'          
         ]
         read_only_fields = ['type']
 
+
+class BusinesProfileSerializer(UserProfileDetailSerializer):
+    """
+    Serializer für Anbieter Profile.
+
+    Basierend auf dem UserProfileDetailSerializer, aber spezialisiert für Anbieter, mit einer reduzierten Anzahl von Feldern.
+    
+    Meta:
+    model: UserProfile
+    fields: ['user','pk', 'file','location','tel','description','working_hours', 'type']
+    read_only_fields: ['type']
+    """
+    class Meta:
+        model = UserProfile
+        fields = [
+            'user',
+            'pk',     
+            'file',
+            'location',
+            'tel',
+            'description',
+            'working_hours', 
+            'type'          
+        ]
+        read_only_fields = ['type']
+    def validate_tel(self, value):
+        """
+        Validiert das Telefonformat.
+        Erwartetes Format: +49 123 456789 oder ähnliche internationale Formate.
+        """
+        phone_regex = re.compile(r'^\+?[\d\s\-()]{7,15}$')  # Erlaubt internationale Nummern
+        if value and not phone_regex.match(value):
+            raise serializers.ValidationError("Invalid phone number format. Example: +49 123 456789")
+        return value
 
 class OfferDetailsSerializer(serializers.ModelSerializer):
     """
@@ -125,7 +159,7 @@ class OfferDetailsSerializer(serializers.ModelSerializer):
     fields: Alle oben genannten Felder.
     read_only_fields: ['id', 'offer']
     """
-
+    
     class Meta:
         model = OfferDetails
         fields = [
@@ -163,6 +197,15 @@ class OfferSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
     user_details = serializers.SerializerMethodField()
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['min_price'] = float(representation['min_price']) if representation['min_price'] is not None else None
+        if 'details' in representation:
+            for detail in representation['details']:
+                detail['price'] = float(detail['price']) if detail['price'] is not None else None
+        
+        return representation
+    
     class Meta:
         model = Offers
         fields = [
@@ -175,7 +218,7 @@ class OfferSerializer(serializers.ModelSerializer):
             'user_details',
             'image',
             'description',
-            'details',  # Details werden hier eingebunden
+            'details',  
             'created_at',
             'updated_at'
         ]
