@@ -148,55 +148,46 @@ class BusinesProfileSerializer(UserProfileDetailSerializer):
             raise serializers.ValidationError("Invalid phone number format. Example: +49 123 456789")
         return value
 
+
 class OfferDetailsSerializer(serializers.ModelSerializer):
     """
-    Serializer für das OfferDetails-Modell.
-
-    Verarbeitet die Details eines Angebots, einschließlich Preis, Lieferzeit und spezifische Merkmale.
-    
-    Meta:
-    model: OfferDetails
-    fields: Alle oben genannten Felder.
-    read_only_fields: ['id', 'offer']
+    Serializer für das OfferDetails-Modell, mit zusätzlicher URL-Darstellung.
     """
-    price = serializers.FloatField()
+
     class Meta:
         model = OfferDetails
         fields = [
             'id',
             'title',
-            'price',
-            'delivery_time_in_days',
             'revisions',
+            'delivery_time_in_days',
+            'price',
             'features',
-            'offer_type'
+            'offer_type',
         ]
-        read_only_fields = ['id', 'offer']
 
-
-class OfferSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        """
+        Fügt eine URL zu jedem Angebotsdetail hinzu.
+        """
+        representation = super().to_representation(instance)
+        representation['url'] = f'/offerdetails/{instance.id}/'
+        representation['price'] = float(instance.price)  # Preis als float zurückgeben
+        return representation
+    
+class OfferListSerializer(serializers.ModelSerializer):
     """
-    Serializer für das Offers-Modell.
-
-    Verarbeitet Angebote und deren Details, einschließlich Benutzerinformationen und Preis-/Lieferzeitberechnungen.
-
-    Meta:
-    model: Offers
-    fields: Alle oben genannten Felder.
-    read_only_fields: ['id', 'created_at', 'updated_at']
-
+    Serializer für die Listenansicht von Angeboten, zeigt URLs der Angebotsdetails.
     """
-
     details = serializers.SerializerMethodField()
-    # min_delivery_time = serializers.ReadOnlyField()
-    # min_price = serializers.ReadOnlyField()
-    # user = serializers.PrimaryKeyRelatedField(read_only=True)
     user_details = serializers.SerializerMethodField()
-
+    min_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    min_delivery_time = serializers.IntegerField(read_only=True)
     class Meta:
         model = Offers
         fields = [
             'id',
+            'user',
             'title',
             'image',
             'description',
@@ -205,65 +196,111 @@ class OfferSerializer(serializers.ModelSerializer):
             'details',
             'min_price',
             'min_delivery_time',
-            'user',
             'user_details',
         ]
-        
-        read_only_fields = ['id', 'created_at', 'updated_at','user','min_price','min_delivery_time', ]
-        
+
     def get_details(self, obj):
         """
-        Dynamische Darstellung der Angebotsdetails:
-        - Für GET: Nur `id` und `url`.
-        - Für POST: Detaillierte Felder.
+        Gibt eine Liste von URLs für die Angebotsdetails zurück.
         """
-        request = self.context.get('request')
-
-        if request and request.method == 'GET':
-            return [
-                {
-                    'id': detail.id,
-                    'url': f"/api/offerdetails/{detail.id}/"
-                }
-                for detail in obj.details.all()
-            ]
-        elif request and request.method == 'POST':
-            details_serializer = OfferDetailsSerializer(obj.details.all(), many=True)
-            return details_serializer.data
-        return []
-    
+        return [
+            {
+                'id': detail.id,
+                'url': f"/api/offerdetails/{detail.id}/"
+            }
+            for detail in obj.details.all()
+        ]
     def get_user_details(self, obj):
+        """
+        Gibt die Benutzerinformationen des Erstellers zurück.
+        """
         user = obj.user
         return {
             "first_name": user.first_name,
             "last_name": user.last_name,
             "username": user.username,
-        }
+        }   
+class OfferDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer für die Detailansicht der Angebote.
+    """
+    details = OfferDetailsSerializer(many=True)
+    min_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    min_delivery_time = serializers.IntegerField(read_only=True)
+    user_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Offers
+        fields = [
+            'id',
+            'user',
+            'title',
+            'image',
+            'description',
+            'created_at',
+            'updated_at',
+            'details',
+            'min_price',
+            'min_delivery_time',
+            'user_details',
+        ]
+
+    def get_user_details(self, obj):
+        """
+        Gibt Benutzerinformationen des Erstellers zurück.
+        """
+        user = obj.user
+        return {
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "username": user.username,
+        }  
+class OffersSerializer(serializers.ModelSerializer):
+    """
+    Serializer für die Eingabe von Angeboten.
+    """
+    details = OfferDetailsSerializer(many=True)
+
+    class Meta:
+        model = Offers
+        fields = [
+            'id',
+            'title',
+            'image',
+            'description',
+            'details',
+        ]
 
     def create(self, validated_data):
-        details_data = validated_data.pop('details')
-        user = self.context['request'].user
-        offer = Offers.objects.create(user=user, **validated_data)
+        """
+        Erstellt ein neues Angebot und die zugehörigen Details.
+        """
+        details_data = validated_data.pop('details', [])
+        validated_data['user'] = self.context['request'].user
+        offer = Offers.objects.create(**validated_data)
 
         for detail in details_data:
-            print("Detail before creation:", detail)
             OfferDetails.objects.create(offer=offer, **detail)
+
         return offer
-    
+
     def update(self, instance, validated_data):
+        """
+        Aktualisiert ein Angebot und die zugehörigen Details.
+        """
         details_data = validated_data.pop('details', None)
         instance.title = validated_data.get('title', instance.title)
-        instance.description = validated_data.get('description', instance.description)
         instance.image = validated_data.get('image', instance.image)
+        instance.description = validated_data.get('description', instance.description)
         instance.save()
 
         if details_data:
+            # Alte Details löschen und neue erstellen
             instance.details.all().delete()
-
             for detail in details_data:
                 OfferDetails.objects.create(offer=instance, **detail)
-        return instance
 
+        return instance
 
 class OrderSerializer(serializers.ModelSerializer):
     """

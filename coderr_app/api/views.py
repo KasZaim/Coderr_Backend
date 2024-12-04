@@ -4,13 +4,15 @@ from rest_framework.filters import OrderingFilter,SearchFilter
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import RetrieveUpdateAPIView
-from .serializer import UserProfileSerializer,ReviewSerializer,OfferSerializer,OfferDetailsSerializer, OrderSerializer,CustomerProfileSerializer,BusinesProfileSerializer
+from .serializer import OfferDetailSerializer, OfferListSerializer, UserProfileSerializer,ReviewSerializer,OffersSerializer,OfferDetailsSerializer, OrderSerializer,CustomerProfileSerializer,BusinesProfileSerializer
 from ..models import UserProfile, Offers,OfferDetails,Order,Review
 from django.db.models import Min, Max, Avg
 from .permissions import IsOwnerOrAdmin,IsCustomer,IsBusinessUser,IsReviewerOrAdmin
 from .pagination import OffersPagination
 from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied
+from django.db.models import Subquery, OuterRef, Min, Max
+
 
 class UserProfileDetailView(RetrieveUpdateAPIView):
     """
@@ -113,7 +115,7 @@ class OffersViewSet(viewsets.ModelViewSet):
     - Unterstützt Filter, Suche und Sortierung.
     """
     permission_classes = [permissions.IsAuthenticated,IsBusinessUser,IsOwnerOrAdmin]
-    serializer_class = OfferSerializer
+    serializer_class = OffersSerializer
     filter_backends = [DjangoFilterBackend, OrderingFilter,SearchFilter]
     filterset_class = OffersFilter 
     ordering_fields = ['updated_at', 'min_price']
@@ -122,6 +124,36 @@ class OffersViewSet(viewsets.ModelViewSet):
     pagination_class = OffersPagination
     queryset=Offers.objects.all()
    
+    def get_queryset(self):
+        """
+        Annotiert Angebote mit zusätzlichen Feldern.
+        """
+        return Offers.objects.annotate(
+            min_price=Subquery(
+                OfferDetails.objects.filter(offer=OuterRef('pk')).values('offer').annotate(
+                    min_price=Min('price')
+                ).values('min_price')
+            ),
+            min_delivery_time=Subquery(
+                OfferDetails.objects.filter(offer=OuterRef('pk')).values('offer').annotate(
+                    min_delivery_time=Min('delivery_time_in_days')
+                ).values('min_delivery_time')
+            ),
+            max_delivery_time=Subquery(
+                OfferDetails.objects.filter(offer=OuterRef('pk')).values('offer').annotate(
+                    max_delivery_time=Max('delivery_time_in_days')
+                ).values('max_delivery_time')
+            )
+        )
+    def get_serializer_class(self):
+        """
+        Wählt den passenden Serializer basierend auf der Aktion aus.
+        """
+        if self.action == 'list':  # Für GET /offers/
+            return OfferListSerializer
+        if self.action == 'retrieve':  # Für GET /offers/<id>/
+            return OfferDetailSerializer
+        return OffersSerializer
 
     
     def destroy(self, request, *args, **kwargs):
