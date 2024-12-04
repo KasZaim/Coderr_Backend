@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models import Min, Max
 
 class UserProfile(models.Model):
     """
@@ -67,6 +68,19 @@ class Offers(models.Model):
 
     def __str__(self):
         return self.title
+    
+    @property
+    def min_price(self):
+        return self.details.aggregate(Min('price'))['price__min']
+
+    @property
+    def min_delivery_time(self):
+        return self.details.aggregate(Min('delivery_time_in_days'))['delivery_time_in_days__min']
+
+    @property
+    def max_delivery_time(self):
+        return self.details.aggregate(Max('delivery_time_in_days'))['delivery_time_in_days__max']
+
     
     class Meta:
         ordering = ['title']

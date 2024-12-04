@@ -159,19 +159,16 @@ class OfferDetailsSerializer(serializers.ModelSerializer):
     fields: Alle oben genannten Felder.
     read_only_fields: ['id', 'offer']
     """
-    
+    price = serializers.FloatField()
     class Meta:
         model = OfferDetails
         fields = [
             'id',
             'title',
             'price',
-            'offer',
             'delivery_time_in_days',
             'revisions',
-            'additional_information',
             'features',
-            'offer',
             'offer_type'
         ]
         read_only_fields = ['id', 'offer']
@@ -190,40 +187,51 @@ class OfferSerializer(serializers.ModelSerializer):
 
     """
 
-    details = OfferDetailsSerializer(many=True)
-    min_delivery_time = serializers.IntegerField(read_only=True)
-    max_delivery_time = serializers.IntegerField(read_only=True)
-    min_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    details = serializers.SerializerMethodField()
+    # min_delivery_time = serializers.ReadOnlyField()
+    # min_price = serializers.ReadOnlyField()
+    # user = serializers.PrimaryKeyRelatedField(read_only=True)
     user_details = serializers.SerializerMethodField()
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        representation['min_price'] = float(representation['min_price']) if representation['min_price'] is not None else None
-        if 'details' in representation:
-            for detail in representation['details']:
-                detail['price'] = float(detail['price']) if detail['price'] is not None else None
-        
-        return representation
-    
     class Meta:
         model = Offers
         fields = [
             'id',
             'title',
-            'min_delivery_time',
-            'max_delivery_time',
-            'min_price',
-            'user',
-            'user_details',
             'image',
             'description',
-            'details',  
             'created_at',
-            'updated_at'
+            'updated_at',
+            'details',
+            'min_price',
+            'min_delivery_time',
+            'user',
+            'user_details',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        
+        read_only_fields = ['id', 'created_at', 'updated_at','user','min_price','min_delivery_time', ]
+        
+    def get_details(self, obj):
+        """
+        Dynamische Darstellung der Angebotsdetails:
+        - Für GET: Nur `id` und `url`.
+        - Für POST: Detaillierte Felder.
+        """
+        request = self.context.get('request')
 
+        if request and request.method == 'GET':
+            return [
+                {
+                    'id': detail.id,
+                    'url': f"/api/offerdetails/{detail.id}/"
+                }
+                for detail in obj.details.all()
+            ]
+        elif request and request.method == 'POST':
+            details_serializer = OfferDetailsSerializer(obj.details.all(), many=True)
+            return details_serializer.data
+        return []
+    
     def get_user_details(self, obj):
         user = obj.user
         return {

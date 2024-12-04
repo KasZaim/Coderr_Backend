@@ -120,29 +120,18 @@ class OffersViewSet(viewsets.ModelViewSet):
     ordering = ['updated_at'] 
     search_fields = ['title', 'description']
     pagination_class = OffersPagination
+    queryset=Offers.objects.all()
+   
 
-    def get_queryset(self):
-        """
-        Beschränkt das QuerySet auf die Angebote des authentifizierten Benutzers
-        und fügt aggregierte Felder hinzu.
-        """
-        user = self.request.user
-
-        queryset = Offers.objects.all().annotate(
-            min_price=Min('details__price'),
-            min_delivery_time=Min('details__delivery_time_in_days'),
-            max_delivery_time=Max('details__delivery_time_in_days')
-        )
-        return queryset
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        OfferDetails.objects.filter(offer=instance).delete()
         instance.delete()
         return Response(
-            {"message": "Offer and its details were deleted successfully."},
-            status=status.HTTP_204_NO_CONTENT
-        )
+        {"message": "Offer and its details were deleted successfully."},
+        status=status.HTTP_204_NO_CONTENT
+    )
+
     
     
         

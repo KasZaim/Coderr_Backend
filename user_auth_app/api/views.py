@@ -51,7 +51,4 @@ class CustomLoginView(APIView):
             }
             return Response(data, status=status.HTTP_200_OK)
         else:
-            return Response(
-                {"error": "Email or Password are invalid"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
