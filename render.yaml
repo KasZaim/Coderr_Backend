@@ -9,7 +9,7 @@ services:
     name: coderr-backend
     runtime: python
     plan: free
-    buildCommand: "./build.sh"
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt && python manage.py collectstatic --no-input && python manage.py migrate"
     startCommand: "gunicorn coderr_project.wsgi:application"
     envVars:
       - key: DATABASE_URL
