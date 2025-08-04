@@ -44,7 +44,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
 
         if instance.file:
-            representation['file'] = f"{settings.MEDIA_URL}{instance.file.name}"
+            representation['file'] = instance.file.url
 
         return representation
 
