@@ -104,7 +104,21 @@ env/
 venv/ 
 ENV/ 
 env.bak/ 
-venv.bak/ 
+venv.bak/
+
+# Static files
+staticfiles/
+static/
+
+# Local development
+*.sqlite3
+local_settings.py
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db 
 
 # mkdocs documentation 
 /site 
