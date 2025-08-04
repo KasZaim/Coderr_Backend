@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 from decouple import config, Csv
 import dj_database_url
+import cloudinary
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,22 +22,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # MEDIA_URL only if Cloudinary is not available (fallback)
-if not all([config('CLOUDINARY_CLOUD_NAME', default=''), 
-           config('CLOUDINARY_API_KEY', default=''), 
-           config('CLOUDINARY_API_SECRET', default='')]):
+if not config('CLOUDINARY_URL', default=''):
     MEDIA_URL = '/media/'
 
-# Cloudinary configuration
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME', default=''),
-    'API_KEY': config('CLOUDINARY_API_KEY', default=''),
-    'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
-}
+# Cloudinary configuration with CLOUDINARY_URL
+cloudinary.config(cloudinary_url=config('CLOUDINARY_URL', default=''))
 
-# Debug: Print Cloudinary config and storage backend (remove in production)
-print("CLOUDINARY_CLOUD_NAME:", config('CLOUDINARY_CLOUD_NAME', default='NOT_SET'))
-print("CLOUDINARY_API_KEY:", config('CLOUDINARY_API_KEY', default='NOT_SET'))
-print("CLOUDINARY_API_SECRET:", "***" if config('CLOUDINARY_API_SECRET', default='') else 'NOT_SET')
+# Debug: Print Cloudinary config (remove in production)
+print("CLOUDINARY_URL:", "***SET***" if config('CLOUDINARY_URL', default='') else 'NOT_SET')
 print("DEFAULT_STORAGE_BACKEND:", "cloudinary_storage.storage.MediaCloudinaryStorage")
 
 # Modern Django 4.2+ Storage Configuration
