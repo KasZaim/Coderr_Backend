@@ -19,7 +19,12 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
+
+# MEDIA_URL only if Cloudinary is not available (fallback)
+if not all([config('CLOUDINARY_CLOUD_NAME', default=''), 
+           config('CLOUDINARY_API_KEY', default=''), 
+           config('CLOUDINARY_API_SECRET', default='')]):
+    MEDIA_URL = '/media/'
 
 # Cloudinary configuration
 CLOUDINARY_STORAGE = {
@@ -28,13 +33,21 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
 }
 
-# Debug: Print Cloudinary config (remove in production)
+# Debug: Print Cloudinary config and storage backend (remove in production)
 print("CLOUDINARY_CLOUD_NAME:", config('CLOUDINARY_CLOUD_NAME', default='NOT_SET'))
 print("CLOUDINARY_API_KEY:", config('CLOUDINARY_API_KEY', default='NOT_SET'))
 print("CLOUDINARY_API_SECRET:", "***" if config('CLOUDINARY_API_SECRET', default='') else 'NOT_SET')
+print("DEFAULT_STORAGE_BACKEND:", "cloudinary_storage.storage.MediaCloudinaryStorage")
 
-# Use Cloudinary for file storage
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# Modern Django 4.2+ Storage Configuration
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
