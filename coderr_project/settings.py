@@ -165,8 +165,7 @@ if config('RAILWAY_ENVIRONMENT', default=''):
     # Railway provides PORT as environment variable
     import os
     PORT = os.environ.get('PORT', 8000)
-    # Use full Railway URL for media files
-    MEDIA_URL = 'https://coderr-backend-production-f3d4.up.railway.app/media/'
+    # Cloudinary handles MEDIA_URL automatically
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
