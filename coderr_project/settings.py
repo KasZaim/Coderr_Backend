@@ -28,6 +28,11 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
 }
 
+# Debug: Print Cloudinary config (remove in production)
+print("CLOUDINARY_CLOUD_NAME:", config('CLOUDINARY_CLOUD_NAME', default='NOT_SET'))
+print("CLOUDINARY_API_KEY:", config('CLOUDINARY_API_KEY', default='NOT_SET'))
+print("CLOUDINARY_API_SECRET:", "***" if config('CLOUDINARY_API_SECRET', default='') else 'NOT_SET')
+
 # Use Cloudinary for file storage
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
@@ -51,8 +56,8 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
     'cloudinary_storage',
+    'django.contrib.staticfiles',
     'cloudinary',
     'coderr_app',
     'rest_framework',
