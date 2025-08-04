@@ -175,8 +175,8 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Whitenoise settings (disabled due to missing file error)
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Keep STATICFILES_STORAGE for django-cloudinary-storage compatibility
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Railway specific settings
 if config('RAILWAY_ENVIRONMENT', default=''):
